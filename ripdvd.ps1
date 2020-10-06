@@ -32,7 +32,7 @@ if ($Tracks.length -gt 99)
 	$Pad += "0"
 }
 $Pos = 0
-$CommandArgs = @()
+$CommandArgs = @("--sout-deinterlace-mode=yadif2x")
 ($Tracks) | ForEach-Object {
 	$Pos += 1
 	$TitleChapter = $_.Start + "-" + $_.End
@@ -53,7 +53,7 @@ $CommandArgs = @()
 	$DestPos = $DestPos.substring($DestPos.Length - $Pad.Length - 1)
 	$DestInputFile = $Path + "\" + $DestPos + " " + $Artist + " - " + $Title + ".mp4"
 	$DestInputFile = "'" + ((($DestInputFile  -replace "\\", "/") -replace "'", "\'") -replace "`"", "\'\'") + "'"
-	$CommandArgs += ":sout=#transcode{vcodec=h264,fps=25,deinterlace,acodec=mp3,ab=128,samplerate=48000}:std{access=file,mux=ts,dst=" + $DestInputFile + "}"
+	$CommandArgs += ":sout=#transcode{vcodec=h264,fps=25,,vfilter=deinterlace,acodec=mp3,ab=128,samplerate=48000}:std{access=file,mux=ts,dst=" + $DestInputFile + "}"
 }
 $CommandArgs += "vlc://quit"
 & $VlcPath $CommandArgs
