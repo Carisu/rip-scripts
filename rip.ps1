@@ -82,7 +82,7 @@ Function global:Rip-Drive
 		}
 		
 		$Encoding.Params = $EncodeParams.($Encoding.Audio)
-		If ($EncodeParams.($Encoding.Video))
+		If ($Encoding.Video)
 		{
 			$Encoding.Params += $EncodeParams.($Encoding.Video)
 		}
@@ -170,15 +170,14 @@ Function global:Rip-Drive
 	(
 		[Parameter(Mandatory=$true)][String]$Type,
 		[Parameter(Mandatory=$true)][String]$DiscType,
-		[String]$Prefix,
-		[int]$StartPosition,
+		[Parameter(Mandatory=$true)][int]$RealPosition,
 		[Parameter(Mandatory=$true)][String]$Position,
 		[Parameter(Mandatory=$true)][Object]$Track,
 		[Parameter(Mandatory=$true)][Object]$Previous
 	)
 	{
 		$Details = @{
-			Position = $Prefix + $Position
+			Position = $Position
 		}
 		if ($DiscType -eq "music")
 		{
@@ -205,9 +204,7 @@ Function global:Rip-Drive
 		if ($Type -eq "CD")
 		{
 			$Details.Option = $Track.Extra
-			[int]$Track = $Position
-			$Track -= $StartPosition
-			$Details.Track = $Track
+			$Details.Track = $RealPosition
 		}
 		
 		$Details
@@ -218,6 +215,7 @@ Function global:Rip-Drive
 		[Parameter(Mandatory=$true)][String]$Type,
 		[Parameter(Mandatory=$true)][String]$DiscType,
 		[Parameter(Mandatory=$true)][Object]$Disc,
+		[String]$Pad,
 		[String]$Prefix,
 		[int]$StartPosition,
 		[Parameter(Mandatory=$true,ValueFromPipeline=$true)][Object[]]$Tracks	
@@ -225,16 +223,7 @@ Function global:Rip-Drive
 	{
 		Begin
 		{
-			$Count = $StartPosition
-			$Pad = ""
-			if (($Tracks.length + $StartPosition) -gt 9)
-			{
-				$Pad += "0"
-			}
-			if (($Tracks.length + $StartPosition) -gt 99)
-			{
-				$Pad += "0"
-			}
+			$Count = 0
 			$Details = @{
 				Disc = discDetails -Type $Type -DiscType $DiscType -Disc $Disc;
 				Tracks = @()
@@ -245,9 +234,9 @@ Function global:Rip-Drive
 		Process
 		{
 			$Count += 1
-			$Pos = $Pad + $Count
-			$Pos = $Pos.substring($Pos.Length - $Pad.Length - 1)
-			$Previous = trackDetails -Type $Type -DiscType $DiscType -Prefix $Prefix -StartPosition $StartPosition -Position $Pos -Track $_ -Previous $Previous
+			$Pos = $Pad + ($Count + $StartPosition)
+			$Pos = $Prefix + $Pos.substring($Pos.Length - $Pad.Length - 1)
+			$Previous = trackDetails -Type $Type -DiscType $DiscType -RealPosition $Count -Position $Pos -Track $_ -Previous $Previous
 			$Details.Tracks += $Previous
 		}
 		
@@ -458,6 +447,24 @@ Function global:Rip-Drive
 			$Params
 		}
 	}
+	
+	Function getPadding
+	(
+		[int]$Length
+	)
+	{
+		$Pad = ""
+		if ($Length -gt 9)
+		{
+			$Pad += "0"
+		}
+		if ($Length -gt 99)
+		{
+			$Pad += "0"
+		}
+		
+		$Pad
+	}
 
 	Function ripDrive
 	{
@@ -498,7 +505,7 @@ Function global:Rip-Drive
 		{
 			$AllData | Out-Host
 			$Tracks | Out-Host
-			$Details = $Tracks | generateDetails -Type $Type -DiscType $Disc.Type -Disc $Disc -Prefix $Prefix -StartPosition $StartPosition
+			$Details = $Tracks | generateDetails -Type $Type -DiscType $Disc.Type -Disc $Disc -Prefix $Prefix -StartPosition $StartPosition -Pad (getPadding -Length ($Tracks.length + $StartPosition))
 			$Details | Out-Host
 			$Paths = generatePaths -Details $Details -Extension $Encoding.Extension
 			$Paths | Out-Host
