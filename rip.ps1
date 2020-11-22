@@ -355,7 +355,7 @@ Function global:Rip-Drive
 			}
 			if ($StartPosition)
 			{
-				$FilePath += " from " + ($StartPosition - 1)
+				$FilePath += " from " + ($StartPosition + 1)
 			}
 			$FilePath += ").txt"
 			if (Test-Path $FilePath)
