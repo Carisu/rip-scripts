@@ -120,7 +120,9 @@ Function global:Rip-Drive
 	{
 		$Headers = @{
 			DVD = @{
-				music = "Artist","Title","Start","End"
+				music = "Artist","Title","Start","End";
+				film = "Start","End";
+				series = "Title","Start","End"
 			};
 			CD = @{
 				music = "Artist","Title","Extra"
@@ -147,12 +149,9 @@ Function global:Rip-Drive
 	)
 	{
 		$Details = @{
-			Position = ""
-		}
-		if ($DiscType -eq "music")
-		{
-			$Details.Title = $Disc.Title;
-			$Details.Subtitle = $Disc.Creator;
+			Position = "";
+			Title = $Disc.Title;
+			Subtitle = $Disc.Creator
 		}
 		if ($Type -eq "DVD")
 		{
@@ -171,7 +170,7 @@ Function global:Rip-Drive
 		[Parameter(Mandatory=$true)][String]$Type,
 		[Parameter(Mandatory=$true)][String]$DiscType,
 		[Parameter(Mandatory=$true)][int]$RealPosition,
-		[Parameter(Mandatory=$true)][String]$Position,
+		[String]$Position = "",
 		[Parameter(Mandatory=$true)][Object]$Track,
 		[Parameter(Mandatory=$true)][Object]$Previous
 	)
@@ -190,14 +189,26 @@ Function global:Rip-Drive
 				$Details.SubTitle = $Previous.SubTitle
 			}
 		}
+		if ($DiscType -eq "film")
+		{
+			$Details.Title = $Previous.Title
+		}
+		if ($DiscType -eq "series")
+		{
+			$Details.Option = $Track.Title
+			$Details.Title = $Previous.Title
+			if (!$Details.Title)
+			{
+				$Details.Title = $Previous.Title
+			}
+		}
 		if ($Type -eq "DVD")
 		{
-			$Details.Option = ""
-			$Start = $_.Start -replace " ", ""
+			$Start = $Track.Start -replace " ", ""
 			$End = $Start
 			If ($_.End)
 			{
-				$End = $_.End -replace " ", ""
+				$End = $Track.End -replace " ", ""
 			}
 			$Details.TitleChapter = $Start + "-" + $End
 		}
@@ -233,9 +244,14 @@ Function global:Rip-Drive
 		
 		Process
 		{
+			$Previous | Out-Host
 			$Count += 1
-			$Pos = $Pad + ($Count + $StartPosition)
-			$Pos = $Prefix + $Pos.substring($Pos.Length - $Pad.Length - 1)
+			$Pos = ""
+			if ($DiscType -ne "film")
+			{
+				$Pos = $Pad + ($Count + $StartPosition)
+				$Pos = $Prefix + $Pos.substring($Pos.Length - $Pad.Length - 1)
+			}
 			$Previous = trackDetails -Type $Type -DiscType $DiscType -RealPosition $Count -Position $Pos -Track $_ -Previous $Previous
 			$Details.Tracks += $Previous
 		}
@@ -316,6 +332,7 @@ Function global:Rip-Drive
 	)
 	{
 		$Disc = createPath -Details $Details.Disc -FolderPath ".\" | fixPath
+		$Disc | Out-Host
 		@{
 			Disc = $Disc;
 			Tracks = $Details.Tracks | generateTrackPaths -FolderPath $Disc -Extension $Extension
@@ -355,7 +372,7 @@ Function global:Rip-Drive
 			}
 			if ($StartPosition)
 			{
-				$FilePath += " from " + ($StartPosition + 1)
+				$FilePath += " from " + ($StartPosition - 1)
 			}
 			$FilePath += ").txt"
 			if (Test-Path $FilePath)
@@ -504,8 +521,11 @@ Function global:Rip-Drive
 		End
 		{
 			$AllData | Out-Host
+			$Disc | Out-Host
 			$Tracks | Out-Host
 			$Details = $Tracks | generateDetails -Type $Type -DiscType $Disc.Type -Disc $Disc -Prefix $Prefix -StartPosition $StartPosition -Pad (getPadding -Length ($Tracks.length + $StartPosition))
+			$Details.Disc | Out-Host
+			$Details.Tracks[0] | Out-Host
 			$Details | Out-Host
 			$Paths = generatePaths -Details $Details -Extension $Encoding.Extension
 			$Paths | Out-Host
