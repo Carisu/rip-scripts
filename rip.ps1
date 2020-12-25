@@ -504,6 +504,7 @@ Function global:Rip-Drive
 			$Tracks = @()
 			$Encoding = getEncoding -Type $Type -Encode $Encode -AudioEncode $AudioEncode -VideoEncode $VideoEncode
 			$DiscHeader = getDiscHeader -Type $Type
+			$Continue = $true
 		}
 
 		Process
@@ -514,7 +515,11 @@ Function global:Rip-Drive
 				$Disc = decode -Details $_ -Header $DiscHeader
 				$TrackHeader = getTrackHeader -Type $Type -DiscType $Disc.Type
 			} else {
-				$Tracks += decode -Details $_ -Header $TrackHeader
+				$Continue = $Continue -and ($_ -ne "=====")
+				if ($Continue)
+				{
+					$Tracks += decode -Details $_ -Header $TrackHeader
+				}
 			}
 		}
 
