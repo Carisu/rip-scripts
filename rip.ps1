@@ -11,7 +11,8 @@ Function global:Rip-Drive
 		[String][ValidateSet("aac", "mp3", "mpg2a")]$AudioEncode,
 		[String][ValidateSet("h264", "mpg2v")]$VideoEncode,
 		[String]$Prefix = "",
-		[int]$StartPosition = 0
+		[int]$StartPosition = 0,
+		[String]$Separator = "====="
 	)
 
 	Function getEncoding
@@ -106,7 +107,7 @@ Function global:Rip-Drive
 	{
 		$Headers = @{
 			DVD = "Type","Title","Creator";
-			CD = "Type","Title","Creator","Extra"
+			CD = "Type","Title","Creator","Additional"
 		}
 		
 		$Headers.$Type
@@ -121,11 +122,11 @@ Function global:Rip-Drive
 		$Headers = @{
 			DVD = @{
 				music = "Artist","Title","Start","End";
-				film = "Start","End";
-				series = "Title","Start","End"
+				film = "Start","End","Franchise";
+				series = "Episode","Start","End","Series"
 			};
 			CD = @{
-				music = "Artist","Title","Extra"
+				music = "Artist","Title","Additional"
 			}
 		}
 		
@@ -159,7 +160,7 @@ Function global:Rip-Drive
 		}
 		if ($Type -eq "CD")
 		{
-			$Details.Option = $Disc.Extra
+			$Details.Option = $Disc.Additional
 		}
 		
 		$Details
@@ -172,7 +173,8 @@ Function global:Rip-Drive
 		[Parameter(Mandatory=$true)][int]$RealPosition,
 		[String]$Position = "",
 		[Parameter(Mandatory=$true)][Object]$Track,
-		[Parameter(Mandatory=$true)][Object]$Previous
+		[Parameter(Mandatory=$true)][Object]$Previous,
+		[Parameter(Mandatory=$true)][Object]$Disc
 	)
 	{
 		$Details = @{
@@ -192,14 +194,16 @@ Function global:Rip-Drive
 		if ($DiscType -eq "film")
 		{
 			$Details.Title = $Previous.Title
+			$Details.SubTitle = $Track.Franchise
 		}
 		if ($DiscType -eq "series")
 		{
-			$Details.Option = $Track.Title
-			$Details.Title = $Previous.Title
-			if (!$Details.Title)
+			$Details.Option = $Track.Episode
+			$Details.Title = $Disc.Title
+			if ($Track.Series)
 			{
-				$Details.Title = $Previous.Title
+				$Details.SubTitle = $Details.Title
+				$Details.Title = $Track.Series
 			}
 		}
 		if ($Type -eq "DVD")
@@ -214,7 +218,7 @@ Function global:Rip-Drive
 		}
 		if ($Type -eq "CD")
 		{
-			$Details.Option = $Track.Extra
+			$Details.Option = $Track.Additional
 			$Details.Track = $RealPosition
 		}
 		
@@ -252,7 +256,7 @@ Function global:Rip-Drive
 				$Pos = $Pad + ($Count + $StartPosition)
 				$Pos = $Prefix + $Pos.substring($Pos.Length - $Pad.Length - 1)
 			}
-			$Previous = trackDetails -Type $Type -DiscType $DiscType -RealPosition $Count -Position $Pos -Track $_ -Previous $Previous
+			$Previous = trackDetails -Type $Type -DiscType $DiscType -RealPosition $Count -Position $Pos -Track $_ -Previous $Previous -Disc $Details.Disc
 			$Details.Tracks += $Previous
 		}
 		
@@ -495,7 +499,8 @@ Function global:Rip-Drive
 			[String]$AudioEncode,
 			[String]$VideoEncode,
 			[String]$Prefix,
-			[int]$StartPosition
+			[int]$StartPosition,
+			[Parameter(Mandatory=$true)][String]$Separator
 		)
 
 		Begin
@@ -515,7 +520,7 @@ Function global:Rip-Drive
 				$Disc = decode -Details $_ -Header $DiscHeader
 				$TrackHeader = getTrackHeader -Type $Type -DiscType $Disc.Type
 			} else {
-				$Continue = $Continue -and ($_ -ne "=====")
+				$Continue = $Continue -and ($_ -ne $Separator)
 				if ($Continue)
 				{
 					$Tracks += decode -Details $_ -Header $TrackHeader
@@ -553,5 +558,5 @@ Function global:Rip-Drive
 	{
 		$StartPosition--
 	}
-	$FileData | ripDrive -Type $Type -Drive $Drive -VlcPath $VlcPath -Encode $Encode -AudioEncode $AudioEncode -VideoEncode $VideoEncode -Prefix $Prefix -StartPosition $StartPosition
+	$FileData | ripDrive -Type $Type -Drive $Drive -VlcPath $VlcPath -Encode $Encode -AudioEncode $AudioEncode -VideoEncode $VideoEncode -Prefix $Prefix -StartPosition $StartPosition -Separator $Separator
 }
