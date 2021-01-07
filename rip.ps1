@@ -106,7 +106,7 @@ Function global:Rip-Drive
 	)
 	{
 		$Headers = @{
-			DVD = "Type","Title","Creator";
+			DVD = "Type","Title","Creator","Subtitle";
 			CD = "Type","Title","Creator","Additional"
 		}
 		
@@ -121,12 +121,13 @@ Function global:Rip-Drive
 	{
 		$Headers = @{
 			DVD = @{
-				music = "Artist","Title","Start","End";
-				film = "Start","End","Franchise";
+				music = "Artist","Title","Start","End","Additional";
+				film = "Start","End","Franchise","Reversed";
 				series = "Episode","Start","End","Series"
 			};
 			CD = @{
-				music = "Artist","Title","Additional"
+				music = "Artist","Title","Additional";
+				book = "Chapter","Section"
 			}
 		}
 		
@@ -156,7 +157,7 @@ Function global:Rip-Drive
 		}
 		if ($Type -eq "DVD")
 		{
-			$Details.Option = ""
+			$Details.Option = $Disc.SubTitle
 		}
 		if ($Type -eq "CD")
 		{
@@ -183,18 +184,32 @@ Function global:Rip-Drive
 		if ($DiscType -eq "music")
 		{
 			$Details.Title = $Track.Title
-			$Details.Subtitle = $Track.Artist
+			$Details.SubTitle = $Track.Artist
+			$Details.Option = $Track.Additional
 			if (!$Details.Title) {
 				$Details.Title = $Previous.Title
+				if (!$Details.Title) {
+					$Details.Title = $Disc.Title
+				}
 			}
 			if (!$Details.SubTitle) {
 				$Details.SubTitle = $Previous.SubTitle
+				if (!$Details.SubTitle)
+				{
+						$Details.SubTitle = $Disc.SubTitle
+				}
 			}
 		}
 		if ($DiscType -eq "film")
 		{
-			$Details.Title = $Previous.Title
+			$Details.Title = $Disc.Title
 			$Details.SubTitle = $Track.Franchise
+			if ($Track.Reversed)
+			{
+				$Title = $Details.SubTitle
+				$Details.SubTitle = $Details.Title
+				$Details.Title = $Title
+			}
 		}
 		if ($DiscType -eq "series")
 		{
@@ -206,11 +221,20 @@ Function global:Rip-Drive
 				$Details.Title = $Track.Series
 			}
 		}
+		if ($DiscType -eq "book")
+		{
+			$Details.Title = $Track.Chapter
+			$Details.SubTitle = $Track.Section
+			if (!$Details.SubTitle)
+			{
+				$Details.SubTitle = $Previous.SubTitle
+			}
+		}
 		if ($Type -eq "DVD")
 		{
 			$Start = $Track.Start -replace " ", ""
 			$End = $Start
-			If ($_.End)
+			If ($Details.End)
 			{
 				$End = $Track.End -replace " ", ""
 			}
@@ -218,7 +242,6 @@ Function global:Rip-Drive
 		}
 		if ($Type -eq "CD")
 		{
-			$Details.Option = $Track.Additional
 			$Details.Track = $RealPosition
 		}
 		
@@ -243,7 +266,10 @@ Function global:Rip-Drive
 				Disc = discDetails -Type $Type -DiscType $DiscType -Disc $Disc;
 				Tracks = @()
 			}
-			$Previous = $Details.Disc
+			$Previous = @{
+				Title = "";
+				SubTitle = "";
+			}
 		}
 		
 		Process
